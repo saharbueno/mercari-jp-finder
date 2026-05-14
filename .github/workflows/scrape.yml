@@ -2,8 +2,13 @@ name: Mercari Scraper
 
 on:
   schedule:
+    # Runs every 5 minutes (UTC). GitHub may delay scheduled runs by several minutes.
     - cron: "*/5 * * * *"
   workflow_dispatch:
+
+concurrency:
+  group: mercari-scraper
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -16,6 +21,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Log run time
+        run: echo "Scrape started at $(date -u)"
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -26,10 +34,12 @@ jobs:
         run: mkdir -p data
 
       - name: Restore listings database
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: data/listings.db
           key: mercari-listings-db-v1
+          restore-keys: |
+            mercari-listings-db-v1
 
       - name: Install dependencies
         run: pip install -r requirements.txt
@@ -38,3 +48,10 @@ jobs:
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: python run_scrape.py
+
+      - name: Save listings database
+        uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: data/listings.db
+          key: mercari-listings-db-v1
