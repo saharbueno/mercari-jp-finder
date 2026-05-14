@@ -1,0 +1,10 @@
+# One keyword per line. Lines starting with # are ignored.
+# Edit this file and push to GitHub to add or remove tracked keywords.
+
+lizmelo
+princess melody
+プリメロ
+マイメロディ
+マイメロディ レア
+マイメロディクッション
+リズメロ

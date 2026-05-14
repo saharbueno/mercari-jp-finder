@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mercari Alert App</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='styles.css') }}"
+    >
+</head>
+<body>
+
+<div class="container">
+
+    <h1>Mercari JP Keyword Alerts</h1>
+    <p class="subtitle">♡ track your favorite finds ♡</p>
+
+    <form action="/add" method="POST" class="keyword-form">
+        <input
+            type="text"
+            name="keyword"
+            placeholder="Enter keyword"
+            required
+        >
+
+        <button type="submit">
+            Add Keyword
+        </button>
+    </form>
+
+    <div class="keywords">
+        <h2>Tracked Keywords</h2>
+
+        {% for keyword in keywords %}
+            <div class="keyword-item">
+                <span>{{ keyword }}</span>
+
+                <a href="{{ url_for('delete', keyword=keyword) }}">
+                    Delete
+                </a>
+            </div>
+        {% endfor %}
+    </div>
+
+    <div class="items">
+        <h2>Recent Listings</h2>
+
+        {% for item in items %}
+            <div class="item-card">
+
+                <img src="{{ item[4] }}">
+
+                <div>
+                    <h3>{{ item[1] }}</h3>
+
+                    <p>Keyword: {{ item[0] }}</p>
+
+                    <p>¥{{ item[2] }}</p>
+
+                    <a href="{{ item[3] }}" target="_blank">
+                        Open Listing
+                    </a>
+                </div>
+
+            </div>
+
+        {% endfor %}
+    </div>
+
+</div>
+
+</body>
+</html>
