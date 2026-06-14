@@ -2,8 +2,8 @@ name: Mercari Scraper
 
 on:
   schedule:
-    # Runs every 5 minutes (UTC). GitHub may delay scheduled runs by several minutes.
-    - cron: "*/5 * * * *"
+    # Requested every 1 minute (UTC). GitHub may enforce a ~5 minute minimum on scheduled runs.
+    - cron: "*/1 * * * *"
   workflow_dispatch:
 
 concurrency:
@@ -47,6 +47,7 @@ jobs:
       - name: Run scraper
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          KEYWORD_WEBHOOKS: ${{ secrets.KEYWORD_WEBHOOKS }}
         run: python run_scrape.py
 
       - name: Save listings database

@@ -1,6 +1,7 @@
 venv/
 __pycache__/
 .env
+keyword_webhooks.json
 data/listings.db
 *.pyc
 .DS_Store

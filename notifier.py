@@ -1,9 +1,15 @@
 import requests
-from config import DISCORD_WEBHOOK
+from config import DISCORD_WEBHOOK, KEYWORD_WEBHOOKS
+
+
+def _webhook_for_keyword(keyword):
+    return KEYWORD_WEBHOOKS.get(keyword) or DISCORD_WEBHOOK
 
 
 def send_discord_notification(item):
-    if not DISCORD_WEBHOOK:
+    webhook = _webhook_for_keyword(item["keyword"])
+
+    if not webhook:
         return
 
     message = {
@@ -22,7 +28,7 @@ def send_discord_notification(item):
     }
 
     try:
-        requests.post(DISCORD_WEBHOOK, json=message)
+        requests.post(webhook, json=message)
 
     except Exception as e:
         print("discord webhook failed:", e)
