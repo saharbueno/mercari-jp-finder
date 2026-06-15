@@ -34,7 +34,7 @@ def index():
 
 @app.route("/add", methods=["POST"])
 def add():
-    keyword = request.form.get("keyword")
+    keyword = request.form.get("keyword", "").strip()
 
     if keyword:
         add_keyword(keyword)

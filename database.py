@@ -88,6 +88,18 @@ def _migrate_schema(cursor):
             "INSERT INTO app_meta(key, value) VALUES ('rebaseline_sort_v1', '1')"
         )
 
+    cursor.execute(
+        "SELECT 1 FROM app_meta WHERE key='trim_keywords_v1'"
+    )
+    if cursor.fetchone() is None:
+        cursor.execute("UPDATE keywords SET keyword = TRIM(keyword)")
+        cursor.execute(
+            "UPDATE seen_items SET keyword = TRIM(keyword) WHERE keyword IS NOT NULL"
+        )
+        cursor.execute(
+            "INSERT INTO app_meta(key, value) VALUES ('trim_keywords_v1', '1')"
+        )
+
 
 init_db()
 
@@ -108,6 +120,11 @@ def get_keywords():
 
 
 def add_keyword(keyword):
+    keyword = keyword.strip()
+
+    if not keyword:
+        return
+
     conn = get_connection()
     cursor = conn.cursor()
 

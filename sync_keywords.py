@@ -15,7 +15,7 @@ def load_keywords_from_file():
         line = line.strip()
 
         if line and not line.startswith("#"):
-            keywords.append(line)
+            keywords.append(line.strip())
 
     return keywords
 
