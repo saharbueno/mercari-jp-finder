@@ -10,6 +10,10 @@ load_dotenv()
 def _load_keyword_webhooks():
     webhooks = {}
 
+    cushion_webhook = os.getenv("DISCORD_WEBHOOK_CUSHION")
+    if cushion_webhook:
+        webhooks["マイメロディクッション"] = cushion_webhook
+
     env_webhooks = os.getenv("KEYWORD_WEBHOOKS")
     if env_webhooks:
         for keyword, url in json.loads(env_webhooks).items():
@@ -24,7 +28,11 @@ def _load_keyword_webhooks():
     return webhooks
 
 
+def get_keyword_webhooks():
+    return _load_keyword_webhooks()
+
+
 DISCORD_WEBHOOK = os.getenv("DISCORD_WEBHOOK")
-KEYWORD_WEBHOOKS = _load_keyword_webhooks()
+KEYWORD_WEBHOOKS = get_keyword_webhooks()
 POLL_INTERVAL_SECONDS = int(os.getenv("POLL_INTERVAL_SECONDS", 60))
 PORT = int(os.getenv("PORT", 5001))

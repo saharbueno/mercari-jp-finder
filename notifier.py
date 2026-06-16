@@ -1,12 +1,13 @@
 import requests
-from config import DISCORD_WEBHOOK, KEYWORD_WEBHOOKS
+from config import DISCORD_WEBHOOK, get_keyword_webhooks
 
 
 def _webhooks_for_keyword(keyword):
     keyword = keyword.strip()
     webhooks = []
+    keyword_webhooks = get_keyword_webhooks()
 
-    specific = KEYWORD_WEBHOOKS.get(keyword)
+    specific = keyword_webhooks.get(keyword)
     if specific:
         webhooks.append(specific)
 
@@ -20,6 +21,7 @@ def send_discord_notification(item):
     webhooks = _webhooks_for_keyword(item["keyword"])
 
     if not webhooks:
+        print(f"no discord webhooks configured for keyword: {item['keyword']}")
         return
 
     message = {
@@ -37,9 +39,16 @@ def send_discord_notification(item):
         )
     }
 
-    try:
-        for webhook in webhooks:
-            requests.post(webhook, json=message)
+    for webhook in webhooks:
+        try:
+            response = requests.post(webhook, json=message, timeout=10)
 
-    except Exception as e:
-        print("discord webhook failed:", e)
+            if response.status_code >= 400:
+                print(
+                    "discord webhook failed:",
+                    response.status_code,
+                    response.text[:200],
+                )
+
+        except Exception as e:
+            print("discord webhook failed:", e)

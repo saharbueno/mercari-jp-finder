@@ -47,6 +47,7 @@ jobs:
       - name: Run scraper
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          DISCORD_WEBHOOK_CUSHION: ${{ secrets.DISCORD_WEBHOOK_CUSHION }}
           KEYWORD_WEBHOOKS: ${{ secrets.KEYWORD_WEBHOOKS }}
         run: python run_scrape.py
 
