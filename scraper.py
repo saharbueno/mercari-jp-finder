@@ -3,7 +3,7 @@ import asyncio
 import mercapi
 from mercapi.requests import SearchRequestData
 
-from config import CUSHION_KEYWORD
+from config import is_cushion_keyword
 
 from database import (
     get_keywords,
@@ -33,7 +33,7 @@ def _item_payload(item, keyword):
 async def search_keyword(keyword):
     client = mercapi.Mercapi()
     baselined = is_keyword_baselined(keyword)
-    is_cushion_keyword = keyword.strip() == CUSHION_KEYWORD
+    is_cushion = is_cushion_keyword(keyword)
 
     print(f"Searching: {keyword}")
 
@@ -59,7 +59,7 @@ async def search_keyword(keyword):
             item_id = str(item.id_)
 
             if item_exists(item_id):
-                if is_cushion_keyword and not item_cushion_alerted(item_id):
+                if is_cushion and not item_cushion_alerted(item_id):
                     parsed_item = _item_payload(item, keyword)
                     send_cushion_notification(parsed_item)
                     mark_cushion_alerted(item_id)
@@ -72,14 +72,14 @@ async def search_keyword(keyword):
             save_item(parsed_item)
             send_discord_notification(parsed_item)
 
-            if is_cushion_keyword:
+            if is_cushion:
                 mark_cushion_alerted(item_id)
                 cushion_count += 1
 
             new_count += 1
             print(f"NEW ITEM: {item.name}")
 
-        if is_cushion_keyword:
+        if is_cushion:
             print(f"Cushion search done: {new_count} new, {cushion_count} cushion alerts")
 
     except Exception as e:

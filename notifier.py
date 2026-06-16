@@ -3,7 +3,7 @@ import threading
 import time
 
 import requests
-from config import CUSHION_KEYWORD, DISCORD_WEBHOOK, get_cushion_webhook
+from config import DISCORD_WEBHOOK, get_cushion_webhook, is_cushion_keyword
 
 _discord_queue = queue.Queue()
 _worker_started = False
@@ -96,5 +96,5 @@ def send_discord_notification(item):
 
     _queue_alert("general", DISCORD_WEBHOOK, message)
 
-    if keyword == CUSHION_KEYWORD:
+    if is_cushion_keyword(keyword):
         send_cushion_notification(item)

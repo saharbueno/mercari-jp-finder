@@ -6,7 +6,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-CUSHION_KEYWORD = "マイメロディクッション"
+CUSHION_KEYWORDS = {
+    "マイメロディクッション",
+    "マイメロクッション",
+}
+
+
+def is_cushion_keyword(keyword):
+    return keyword.strip() in CUSHION_KEYWORDS
 
 
 def get_cushion_webhook():
@@ -18,11 +25,11 @@ def get_cushion_webhook():
     webhooks_file = Path("keyword_webhooks.json")
     if webhooks_file.exists():
         file_webhooks = json.loads(webhooks_file.read_text(encoding="utf-8"))
-        return file_webhooks.get(CUSHION_KEYWORD)
+        return file_webhooks.get("マイメロディクッション")
 
     env_webhooks = os.getenv("KEYWORD_WEBHOOKS")
     if env_webhooks:
-        return json.loads(env_webhooks).get(CUSHION_KEYWORD)
+        return json.loads(env_webhooks).get("マイメロディクッション")
 
     return None
 
