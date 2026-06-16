@@ -1,7 +1,13 @@
+import queue
 import threading
+import time
 
 import requests
 from config import DISCORD_WEBHOOK, get_keyword_webhooks
+
+_discord_queue = queue.Queue()
+_worker_started = False
+_worker_lock = threading.Lock()
 
 
 def _webhooks_for_keyword(keyword):
@@ -19,20 +25,43 @@ def _webhooks_for_keyword(keyword):
     return webhooks
 
 
-def _post_to_discord(webhooks, message):
-    for webhook in webhooks:
-        try:
-            response = requests.post(webhook, json=message, timeout=10)
+def _discord_worker():
+    while True:
+        webhooks, message = _discord_queue.get()
 
-            if response.status_code >= 400:
-                print(
-                    "discord webhook failed:",
-                    response.status_code,
-                    response.text[:200],
-                )
+        try:
+            for webhook in webhooks:
+                response = requests.post(webhook, json=message, timeout=10)
+
+                if response.status_code == 429:
+                    retry_after = response.json().get("retry_after", 1)
+                    time.sleep(float(retry_after))
+                    response = requests.post(webhook, json=message, timeout=10)
+
+                if response.status_code >= 400:
+                    print(
+                        "discord webhook failed:",
+                        response.status_code,
+                        response.text[:200],
+                    )
+
+                time.sleep(0.4)
 
         except Exception as e:
             print("discord webhook failed:", e)
+
+        finally:
+            _discord_queue.task_done()
+            time.sleep(0.2)
+
+
+def _ensure_worker():
+    global _worker_started
+
+    with _worker_lock:
+        if not _worker_started:
+            threading.Thread(target=_discord_worker, daemon=True).start()
+            _worker_started = True
 
 
 def send_discord_notification(item):
@@ -57,8 +86,5 @@ def send_discord_notification(item):
         )
     }
 
-    threading.Thread(
-        target=_post_to_discord,
-        args=(webhooks, message),
-        daemon=True,
-    ).start()
+    _ensure_worker()
+    _discord_queue.put((webhooks, message))
