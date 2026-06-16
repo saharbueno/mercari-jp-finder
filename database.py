@@ -103,6 +103,21 @@ def _migrate_schema(cursor):
         )
 
     cursor.execute(
+        "SELECT 1 FROM app_meta WHERE key='cushion_alerted_v2'"
+    )
+    if cursor.fetchone() is None:
+        cursor.execute(
+            """
+            UPDATE seen_items
+            SET cushion_alerted = 0
+            WHERE keyword NOT IN ('マイメロディクッション', 'マイメロクッション')
+            """
+        )
+        cursor.execute(
+            "INSERT INTO app_meta(key, value) VALUES ('cushion_alerted_v2', '1')"
+        )
+
+    cursor.execute(
         "SELECT 1 FROM app_meta WHERE key='trim_keywords_v1'"
     )
     if cursor.fetchone() is None:

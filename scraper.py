@@ -46,7 +46,12 @@ async def search_keyword(keyword):
 
         if not baselined:
             for item in results.items:
-                mark_item_seen(str(item.id_), keyword, cushion_alerted=True)
+                item_id = str(item.id_)
+
+                if item_exists(item_id):
+                    continue
+
+                mark_item_seen(item_id, keyword, cushion_alerted=is_cushion)
 
             set_keyword_baselined(keyword)
             print(f"Baselined {len(results.items)} existing listings for: {keyword}")
