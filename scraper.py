@@ -3,16 +3,20 @@ import asyncio
 import mercapi
 from mercapi.requests import SearchRequestData
 
+from config import CUSHION_KEYWORD
+
 from database import (
     get_keywords,
     is_keyword_baselined,
+    item_cushion_alerted,
     item_exists,
+    mark_cushion_alerted,
     mark_item_seen,
     save_item,
     set_keyword_baselined,
 )
 
-from notifier import send_discord_notification
+from notifier import send_cushion_notification, send_discord_notification
 
 
 def _item_payload(item, keyword):
@@ -29,6 +33,7 @@ def _item_payload(item, keyword):
 async def search_keyword(keyword):
     client = mercapi.Mercapi()
     baselined = is_keyword_baselined(keyword)
+    is_cushion_keyword = keyword.strip() == CUSHION_KEYWORD
 
     print(f"Searching: {keyword}")
 
@@ -41,16 +46,25 @@ async def search_keyword(keyword):
 
         if not baselined:
             for item in results.items:
-                mark_item_seen(str(item.id_), keyword)
+                mark_item_seen(str(item.id_), keyword, cushion_alerted=True)
 
             set_keyword_baselined(keyword)
             print(f"Baselined {len(results.items)} existing listings for: {keyword}")
             return
 
+        new_count = 0
+        cushion_count = 0
+
         for item in results.items:
             item_id = str(item.id_)
 
             if item_exists(item_id):
+                if is_cushion_keyword and not item_cushion_alerted(item_id):
+                    parsed_item = _item_payload(item, keyword)
+                    send_cushion_notification(parsed_item)
+                    mark_cushion_alerted(item_id)
+                    cushion_count += 1
+                    print(f"CUSHION ITEM: {item.name}")
                 continue
 
             parsed_item = _item_payload(item, keyword)
@@ -58,7 +72,15 @@ async def search_keyword(keyword):
             save_item(parsed_item)
             send_discord_notification(parsed_item)
 
+            if is_cushion_keyword:
+                mark_cushion_alerted(item_id)
+                cushion_count += 1
+
+            new_count += 1
             print(f"NEW ITEM: {item.name}")
+
+        if is_cushion_keyword:
+            print(f"Cushion search done: {new_count} new, {cushion_count} cushion alerts")
 
     except Exception as e:
         print(f"Error searching {keyword}:", e)

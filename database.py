@@ -70,6 +70,20 @@ def _migrate_schema(cursor):
             "ALTER TABLE seen_items ADD COLUMN is_alert INTEGER NOT NULL DEFAULT 0"
         )
 
+    if "cushion_alerted" not in item_columns:
+        cursor.execute(
+            "ALTER TABLE seen_items ADD COLUMN cushion_alerted INTEGER NOT NULL DEFAULT 0"
+        )
+
+    cursor.execute(
+        "SELECT 1 FROM app_meta WHERE key='cushion_alerted_v1'"
+    )
+    if cursor.fetchone() is None:
+        cursor.execute("UPDATE seen_items SET cushion_alerted = 1")
+        cursor.execute(
+            "INSERT INTO app_meta(key, value) VALUES ('cushion_alerted_v1', '1')"
+        )
+
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS app_meta (
@@ -222,16 +236,44 @@ def item_exists(item_id):
     return exists
 
 
-def mark_item_seen(item_id, keyword):
+def item_cushion_alerted(item_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "SELECT cushion_alerted FROM seen_items WHERE item_id=?",
+        (item_id,),
+    )
+
+    row = cursor.fetchone()
+    conn.close()
+
+    return bool(row and row[0])
+
+
+def mark_cushion_alerted(item_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "UPDATE seen_items SET cushion_alerted = 1 WHERE item_id=?",
+        (item_id,),
+    )
+
+    conn.commit()
+    conn.close()
+
+
+def mark_item_seen(item_id, keyword, cushion_alerted=False):
     conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute(
         """
-        INSERT OR IGNORE INTO seen_items(item_id, keyword, is_alert)
-        VALUES (?, ?, 0)
+        INSERT OR IGNORE INTO seen_items(item_id, keyword, is_alert, cushion_alerted)
+        VALUES (?, ?, 0, ?)
         """,
-        (item_id, keyword),
+        (item_id, keyword, 1 if cushion_alerted else 0),
     )
 
     conn.commit()
@@ -245,9 +287,9 @@ def save_item(item):
     cursor.execute(
         """
         INSERT INTO seen_items(
-            item_id, keyword, title, price, url, image, is_alert
+            item_id, keyword, title, price, url, image, is_alert, cushion_alerted
         )
-        VALUES (?, ?, ?, ?, ?, ?, 1)
+        VALUES (?, ?, ?, ?, ?, ?, 1, 0)
         """,
         (
             item["id"],

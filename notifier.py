@@ -79,6 +79,17 @@ def _queue_alert(channel, webhook, message):
     _discord_queue.put((channel, webhook, message))
 
 
+def send_cushion_notification(item):
+    cushion_webhook = get_cushion_webhook()
+    message = _build_message(item)
+
+    if not cushion_webhook:
+        print(f"cushion listing found but no cushion webhook configured: {item['title']}")
+        return
+
+    _queue_alert("cushion", cushion_webhook, message)
+
+
 def send_discord_notification(item):
     keyword = item["keyword"].strip()
     message = _build_message(item)
@@ -86,8 +97,4 @@ def send_discord_notification(item):
     _queue_alert("general", DISCORD_WEBHOOK, message)
 
     if keyword == CUSHION_KEYWORD:
-        cushion_webhook = get_cushion_webhook()
-        _queue_alert("cushion", cushion_webhook, message)
-
-        if not cushion_webhook:
-            print(f"cushion listing found but no cushion webhook configured: {item['title']}")
+        send_cushion_notification(item)
