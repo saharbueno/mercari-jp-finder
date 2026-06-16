@@ -3,75 +3,15 @@ import threading
 import time
 
 import requests
-from config import DISCORD_WEBHOOK, get_keyword_webhooks
+from config import CUSHION_KEYWORD, DISCORD_WEBHOOK, get_cushion_webhook
 
 _discord_queue = queue.Queue()
 _worker_started = False
 _worker_lock = threading.Lock()
 
 
-def _webhooks_for_keyword(keyword):
-    keyword = keyword.strip()
-    webhooks = []
-    keyword_webhooks = get_keyword_webhooks()
-
-    specific = keyword_webhooks.get(keyword)
-    if specific:
-        webhooks.append(specific)
-
-    if DISCORD_WEBHOOK and DISCORD_WEBHOOK not in webhooks:
-        webhooks.append(DISCORD_WEBHOOK)
-
-    return webhooks
-
-
-def _discord_worker():
-    while True:
-        webhooks, message = _discord_queue.get()
-
-        try:
-            for webhook in webhooks:
-                response = requests.post(webhook, json=message, timeout=10)
-
-                if response.status_code == 429:
-                    retry_after = response.json().get("retry_after", 1)
-                    time.sleep(float(retry_after))
-                    response = requests.post(webhook, json=message, timeout=10)
-
-                if response.status_code >= 400:
-                    print(
-                        "discord webhook failed:",
-                        response.status_code,
-                        response.text[:200],
-                    )
-
-                time.sleep(0.4)
-
-        except Exception as e:
-            print("discord webhook failed:", e)
-
-        finally:
-            _discord_queue.task_done()
-            time.sleep(0.2)
-
-
-def _ensure_worker():
-    global _worker_started
-
-    with _worker_lock:
-        if not _worker_started:
-            threading.Thread(target=_discord_worker, daemon=True).start()
-            _worker_started = True
-
-
-def send_discord_notification(item):
-    webhooks = _webhooks_for_keyword(item["keyword"])
-
-    if not webhooks:
-        print(f"no discord webhooks configured for keyword: {item['keyword']}")
-        return
-
-    message = {
+def _build_message(item):
+    return {
         "content": (
             "₊˚⊹ **♡ new mercari listing ♡** ⊹˚₊\n"
             "　　｡ ₊°༺❤︎༻°₊ ｡\n"
@@ -86,5 +26,68 @@ def send_discord_notification(item):
         )
     }
 
+
+def _post_message(webhook, message):
+    response = requests.post(webhook, json=message, timeout=10)
+
+    if response.status_code == 429:
+        retry_after = response.json().get("retry_after", 1)
+        time.sleep(float(retry_after))
+        response = requests.post(webhook, json=message, timeout=10)
+
+    if response.status_code >= 400:
+        print(
+            "discord webhook failed:",
+            response.status_code,
+            response.text[:200],
+        )
+        return False
+
+    return True
+
+
+def _discord_worker():
+    while True:
+        channel, webhook, message = _discord_queue.get()
+
+        try:
+            if _post_message(webhook, message):
+                print(f"sent alert to {channel}: {message['content'].split(chr(10))[5][:50]}")
+
+        except Exception as e:
+            print(f"discord webhook failed ({channel}):", e)
+
+        finally:
+            _discord_queue.task_done()
+            time.sleep(0.3)
+
+
+def _ensure_worker():
+    global _worker_started
+
+    with _worker_lock:
+        if not _worker_started:
+            threading.Thread(target=_discord_worker, daemon=True).start()
+            _worker_started = True
+
+
+def _queue_alert(channel, webhook, message):
+    if not webhook:
+        return
+
     _ensure_worker()
-    _discord_queue.put((webhooks, message))
+    _discord_queue.put((channel, webhook, message))
+
+
+def send_discord_notification(item):
+    keyword = item["keyword"].strip()
+    message = _build_message(item)
+
+    _queue_alert("general", DISCORD_WEBHOOK, message)
+
+    if keyword == CUSHION_KEYWORD:
+        cushion_webhook = get_cushion_webhook()
+        _queue_alert("cushion", cushion_webhook, message)
+
+        if not cushion_webhook:
+            print(f"cushion listing found but no cushion webhook configured: {item['title']}")
